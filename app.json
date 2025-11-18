@@ -1,0 +1,61 @@
+{
+  "expo": {
+    "name": "SmoqueBrosApp",
+    "slug": "SmoqueBrosApp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/Smoque_Bros_Logo.png",
+    "scheme": "smoquebrosapp",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "usesCleartextTraffic": true,
+      "edgeToEdgeEnabled": true,
+      "package": "com.anonymous.SmoqueBrosApp",
+      "googleServicesFile": "./google-services.json",
+      "useNextNotificationsApi": true,
+      "permissions": [
+        "INTERNET",
+        "VIBRATE",
+        "POST_NOTIFICATIONS"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-dev-client",
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/Smoque_Bros_Logo.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/Smoque_Bros_Logo.png",
+          "color": "#ffffff",
+          "sounds": []
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "e14ea7c2-c9e5-453e-b06b-25c7a26a694e"
+      }
+    }
+  }
+}
