@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "404318315259",
+    "project_id": "smoquebros-4badf",
+    "storage_bucket": "smoquebros-4badf.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:404318315259:android:c9c8539578a5afdca6065e",
+        "android_client_info": {
+          "package_name": "com.anonymous.SmoqueBrosApp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC8UWBljGAzDgyQzoPtRnQuddChXfVMw3g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

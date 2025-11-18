@@ -1,0 +1,30 @@
+[
+  {
+    "name": "Classic Pulled Pork",
+    "category": "Sandwiches",
+    "price": 12.99,
+    "description": "Slow-smoked pulled pork, topped with our signature BBQ sauce and coleslaw, served on a brioche bun.",
+    "imageUrl": "https://example.com/images/pulled-pork.jpg"
+  },
+  {
+    "name": "Smoked Brisket Platter",
+    "category": "Platters",
+    "price": 18.50,
+    "description": "12-hour smoked beef brisket, sliced to perfection. Served with pickles, onions, and two sides of your choice.",
+    "imageUrl": "https://example.com/images/brisket-platter.jpg"
+  },
+  {
+    "name": "BBQ Ribs (Half Rack)",
+    "category": "Platters",
+    "price": 16.75,
+    "description": "A half rack of our fall-off-the-bone pork ribs, glazed with a sweet and tangy BBQ sauce.",
+    "imageUrl": "https://example.com/images/bbq-ribs.jpg"
+  },
+  {
+    "name": "Smoked Chicken Wings",
+    "category": "Appetizers",
+    "price": 9.99,
+    "description": "A dozen jumbo wings, smoked and then fried to a crispy finish. Tossed in your choice of BBQ or buffalo sauce.",
+    "imageUrl": "https://example.com/images/chicken-wings.jpg"
+  }
+]

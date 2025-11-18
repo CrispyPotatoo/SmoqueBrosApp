@@ -1,0 +1,40 @@
+{
+  "products": [
+    {
+      "id": "1",
+      "name": "Smoked Brisket",
+      "price": 25.99,
+      "image": "https://images.unsplash.com/photo-1588655253398-35c43d4c066a?q=80&w=2070&auto=format&fit=crop",
+      "description": "12-hour slow-smoked Texas-style brisket, seasoned with our signature rub. Tender, juicy, and full of flavor."
+    },
+    {
+      "id": "2",
+      "name": "Pulled Pork Sandwich",
+      "price": 14.5,
+      "image": "https://images.unsplash.com/photo-1625944022799-4a42888a3a0c?q=80&w=1974&auto=format&fit=crop",
+      "description": "Our classic pulled pork, smoked to perfection and served on a brioche bun with a side of coleslaw."
+    },
+    {
+      "id": "3",
+      "name": "BBQ Ribs (Full Rack)",
+      "price": 32,
+      "image": "https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=2069&auto=format&fit=crop",
+      "description": "Fall-off-the-bone pork ribs glazed with our house-made sweet and tangy BBQ sauce."
+    },
+    {
+      "id": "4",
+      "name": "Smoked Chicken Wings",
+      "price": 16.75,
+      "image": "https://images.unsplash.com/photo-1604467707610-df0273ac3798?q=80&w=2070&auto=format&fit=crop",
+      "description": "A dozen jumbo wings, smoked and then fried to a crispy finish. Served with your choice of sauce."
+    },
+    {
+      "id": "5",
+      "name": "Sausage Link",
+      "price": 8.99,
+      "image": "https://images.unsplash.com/photo-1593038437936-7377a68a2438?q=80&w=1935&auto=format&fit=crop",
+      "description": "Spicy smoked sausage link, perfect as a side or on its own."
+    }
+  ],
+  "users": []
+}
