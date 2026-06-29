@@ -11,14 +11,14 @@
 
 ## Project Overview
 
-**SmoqueBros App** is a full-featured mobile e-commerce application built with React Native (Expo) for a BBQ/smoked food shop. The app allows customers to browse a product catalogue, manage a shopping cart, place orders with delivery or pickup, track order status in real time, and submit KYC (Know Your Customer) identity verification documents. Push notifications keep customers informed of order and KYC status updates automatically via Firebase Cloud Functions and the Expo Push API.
+**SmoqueBros App** is a full-featured mobile e-commerce application built with React Native (Expo) for a vape shop store. The app allows customers to browse a product catalogue, manage a shopping cart, place orders with delivery or pickup, track order status in real time, and submit KYC (Know Your Customer) identity verification documents. Push notifications keep customers informed of order and KYC status updates automatically via Firebase Cloud Functions and the Expo Push API.
 
 ---
 
 ## Key Features
 
-- **Product Catalogue** — Browse, filter by category (BBQ Platters, Sandwiches, Side Dishes, Sauces, Meats by the Pound, Drinks), and sort by price; real-time Firestore sync excludes archived products automatically.
-- **Shopping Cart** — Add items with flavor variants, adjust quantities with stock validation, and persist cart to Firestore for cross-device consistency.
+- **Product Catalogue** — Browse, filter by category (Mods, Pods, Disposable), and sort by price; real-time Firestore sync excludes archived products automatically.
+- **Shopping Cart** — Add items with vape variants, adjust quantities with stock validation, and persist cart to Firestore for cross-device consistency.
 - **Order Management** — Place delivery or pickup orders with subtotal, shipping cost, and tax breakdowns; full order history with real-time status tracking.
 - **Order Tracking** — Per-order detail view showing live status (Preparing → Processing → Shipped → Completed / Cancelled) with stock auto-restoration on cancellation.
 - **KYC Verification** — In-app identity verification flow: capture selfie + ID front/back images, upload to Supabase Storage, and store metadata in Firestore.
