@@ -1,8 +1,8 @@
-import { collection, addDoc, serverTimestamp, doc, writeBatch, getDocs, query, where, orderBy, getDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../constants/firebaseConfig';
-import { CartItem } from './cart';
 import { getAuth } from 'firebase/auth';
+import { collection, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, where, writeBatch } from 'firebase/firestore';
+import { db } from '../constants/firebaseConfig';
 import { getAddressById } from './address';
+import { CartItem } from './cart';
 
 const ORDERS_COLLECTION = 'orders';
 const ORDER_ITEMS_COLLECTION = 'order_items';
@@ -66,6 +66,91 @@ export const getOrdersByUserId = async (userId: string): Promise<Order[]> => {
   } catch (error) {
     console.error('❌ Failed to fetch orders:', error);
     throw error;
+  }
+};
+
+export const subscribeToOrdersByUserId = (
+  userId: string,
+  onOrders: (orders: Order[]) => void,
+  onError?: (error: any) => void,
+) => {
+  try {
+    const ordersRef = collection(db, ORDERS_COLLECTION);
+
+    const mapSnapshotToOrders = (snapshots: Array<any>) => {
+      const docsMap = new Map<string, any>();
+
+      snapshots.forEach((snapshot) => {
+        if (!snapshot) return;
+        snapshot.docs.forEach((doc: any) => {
+          docsMap.set(doc.id, doc);
+        });
+      });
+
+      const orders = Array.from(docsMap.values()).map((doc: any) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          user_id: data.user_id || data.userId,
+          userId: data.userId || data.user_id,
+          total_amount: data.total_amount || data.total,
+          total: data.total || data.total_amount,
+          created_at: data.created_at || data.createdAt,
+          createdAt: data.createdAt || data.created_at,
+        } as Order;
+      });
+
+      orders.sort((a, b) => {
+        const dateA = a.created_at?.toDate?.() || a.createdAt?.toDate?.() || new Date(0);
+        const dateB = b.created_at?.toDate?.() || b.createdAt?.toDate?.() || new Date(0);
+        return dateB.getTime() - dateA.getTime();
+      });
+
+      onOrders(orders);
+    };
+
+    const handleError = (error: any) => {
+      console.error('❌ Orders subscription error:', error);
+      if (onError) onError(error);
+    };
+
+    const qNew = query(ordersRef, where('user_id', '==', userId));
+    const qOld = query(ordersRef, where('userId', '==', userId));
+
+    let latestNewSnapshot: any = null;
+    let latestOldSnapshot: any = null;
+
+    const emitCombined = () => {
+      mapSnapshotToOrders([latestNewSnapshot, latestOldSnapshot]);
+    };
+
+    const unsubscribeNew = onSnapshot(
+      qNew,
+      (snapshot) => {
+        latestNewSnapshot = snapshot;
+        emitCombined();
+      },
+      handleError,
+    );
+
+    const unsubscribeOld = onSnapshot(
+      qOld,
+      (snapshot) => {
+        latestOldSnapshot = snapshot;
+        emitCombined();
+      },
+      handleError,
+    );
+
+    return () => {
+      unsubscribeNew();
+      unsubscribeOld();
+    };
+  } catch (error) {
+    console.error('❌ Failed to subscribe to orders:', error);
+    if (onError) onError(error);
+    return () => {};
   }
 };
 

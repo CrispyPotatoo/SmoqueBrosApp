@@ -2,20 +2,19 @@ import { Feather } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppDialog } from '../components/AppDialogProvider';
 import { useSession } from '../context/SessionProvider';
 import { Address, getDefaultAddress } from '../services/address';
 import { CartItem, getCartItems } from '../services/cart';
 import { getKYCStatus } from '../services/kyc';
-import { createOrder } from '../services/orders';
 import { getProductById } from '../services/products';
 
 export default function CheckoutScreen() {
@@ -41,7 +40,7 @@ export default function CheckoutScreen() {
       try {
         // Check KYC verification status
         const kycStatus = await getKYCStatus(session.uid);
-        
+
         if (kycStatus.status !== 'verified') {
           setIsLoading(false);
           // Immediately redirect back - don't allow access to checkout
@@ -63,19 +62,19 @@ export default function CheckoutScreen() {
         const allCartItems = await getCartItems(session.uid);
         const idsToFetch = new Set(JSON.parse(selectedItemIds));
         const selected = allCartItems.filter((item) => idsToFetch.has(item.id));
-        
+
         console.log('🛒 Selected cart items for checkout:', selected);
-        
+
         // Validate stock by fetching current product data from Firestore
         let stockAvailable = true;
         const itemsWithCurrentStock: CartItem[] = [];
         const outOfStock: string[] = [];
-        
+
         for (const item of selected) {
           try {
             // Fetch current product data to get real-time stock
             const currentProduct = await getProductById(item.productId);
-            
+
             if (!currentProduct) {
               console.warn(`⚠️ Product ${item.productId} not found`);
               stockAvailable = false;
@@ -83,14 +82,14 @@ export default function CheckoutScreen() {
               itemsWithCurrentStock.push(item);
               continue;
             }
-            
+
             // Check if product has enough stock for the cart quantity
             if (currentProduct.stock < item.quantity) {
               console.warn(`⚠️ Insufficient stock for ${item.name}: need ${item.quantity}, available ${currentProduct.stock}`);
               stockAvailable = false;
               outOfStock.push(`${item.name} (Need ${item.quantity}, only ${currentProduct.stock} available)`);
             }
-            
+
             // Update item with current stock for display
             itemsWithCurrentStock.push({
               ...item,
@@ -103,13 +102,13 @@ export default function CheckoutScreen() {
             itemsWithCurrentStock.push(item);
           }
         }
-        
+
         setItems(itemsWithCurrentStock);
         setOutOfStockItems(outOfStock);
         console.log('📦 Current stock values:', itemsWithCurrentStock.map(item => ({ name: item.name, cartQty: item.quantity, availableStock: item.stock })));
         console.log('✅ Stock available?', stockAvailable);
         setIsStockAvailable(stockAvailable);
-        
+
         // Fetch default address
         const defaultAddress = await getDefaultAddress(session.uid);
         setAddress(defaultAddress);
@@ -135,7 +134,7 @@ export default function CheckoutScreen() {
           }
         }
       };
-      
+
       refreshAddress();
     }, [session])
   );
@@ -154,29 +153,34 @@ export default function CheckoutScreen() {
       return;
     }
 
-    setIsPlacingOrder(true);
-    try {
-      const newOrderId = await createOrder(
-        session.uid, 
-        items, 
-        totalPrice,
-        address?.id, // Pass address ID
-        'cash', // Default payment method
-        'delivery', // Default order type
-        subtotal,
-        shippingFee,
-        taxAmount
-      );
-      // Navigate to the new payment screen with the order ID
-      router.replace({ pathname: '/payment', params: { orderId: newOrderId } });
-    } catch (error) {
-      console.error(error);
+    const { selectedItemIds } = params;
+    if (!selectedItemIds || typeof selectedItemIds !== 'string') {
       showDialog({
         title: 'Error',
-        message: 'Failed to place your order. Please try again.',
+        message: 'Checkout information is missing. Please start again from your cart.',
       });
-    } finally {
-      setIsPlacingOrder(false);
+      router.replace('/cart');
+      return;
+    }
+
+    try {
+      router.push({
+        pathname: '/payment',
+        params: {
+          selectedItemIds: selectedItemIds as string,
+          subtotal: String(subtotal),
+          shippingFee: String(shippingFee),
+          taxAmount: String(taxAmount),
+          totalPrice: String(totalPrice),
+          addressId: address.id,
+        },
+      });
+    } catch (error) {
+      console.error('Error navigating to payment:', error);
+      showDialog({
+        title: 'Error',
+        message: 'Failed to continue to payment. Please try again.',
+      });
     }
   };
 
@@ -189,17 +193,17 @@ export default function CheckoutScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.centered}>
+      <SafeAreaView style={styles.centered} edges={['top', 'bottom']}>
         <ActivityIndicator size="large" />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Feather name="arrow-left" size={24} color="#333" />
+          <Feather name="arrow-left" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Checkout</Text>
       </View>
@@ -232,7 +236,7 @@ export default function CheckoutScreen() {
             ) : (
               <View style={styles.noAddressContainer}>
                 <Text style={styles.addressPlaceholder}>No delivery address found</Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.addAddressButton}
                   onPress={() => router.push('/address/add')}
                 >
@@ -256,19 +260,19 @@ export default function CheckoutScreen() {
         </View>
 
         {!isStockAvailable && (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>
-            The following items have insufficient stock:
-          </Text>
-          {outOfStockItems.map((item, index) => (
-            <Text key={index} style={styles.errorItemText}>• {item}</Text>
-          ))}
-          <Text style={styles.errorText}>
-            Please adjust quantities or remove items to proceed.
-          </Text>
-        </View>
-      )}
-      <View style={styles.summaryContainer}>
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>
+              The following items have insufficient stock:
+            </Text>
+            {outOfStockItems.map((item, index) => (
+              <Text key={index} style={styles.errorItemText}>• {item}</Text>
+            ))}
+            <Text style={styles.errorText}>
+              Please adjust quantities or remove items to proceed.
+            </Text>
+          </View>
+        )}
+        <View style={styles.summaryContainer}>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryText}>Subtotal</Text>
             <Text style={styles.summaryValue}>₱{subtotal.toFixed(2)}</Text>
@@ -296,9 +300,9 @@ export default function CheckoutScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.placeOrderButton, (!isStockAvailable || isPlacingOrder) && styles.disabledButton]}
-          onPress={handlePlaceOrder} 
+          onPress={handlePlaceOrder}
           disabled={!isStockAvailable || isPlacingOrder}>
           {!isStockAvailable ? (
             <Text style={styles.placeOrderButtonText}>Out of Stock</Text>

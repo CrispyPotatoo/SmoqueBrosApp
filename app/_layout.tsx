@@ -3,17 +3,19 @@ import { Slot, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppDialogProvider } from '../components/AppDialogProvider';
 import '../constants/firebaseConfig';
 import { CartProvider } from '../context/CartContext';
 import { ProductProvider } from '../context/ProductProvider';
 import { SessionProvider, useSession } from '../context/SessionProvider';
 import {
-    handleNotificationTap,
-    initializeNotifications,
-    setupNotificationReceivedHandler,
-    setupNotificationResponseHandler,
-    startOrderStatusListener
+  clearAllNotifications,
+  handleNotificationTap,
+  initializeNotifications,
+  setupNotificationReceivedHandler,
+  setupNotificationResponseHandler,
+  startOrderStatusListener
 } from '../services/notifications';
 
 // Conditionally import expo-notifications
@@ -42,6 +44,11 @@ function NotificationInitializer() {
     // call unconditionally here.
     initializeNotifications(session.uid).catch((error) => {
       console.error('Failed to initialize notifications:', error);
+    });
+
+    // Clear any delivered notifications and reset badge when the app is opened
+    clearAllNotifications().catch((error) => {
+      console.error('Failed to clear notifications:', error);
     });
 
     // Listen to order status changes for this user and show local notifications.
@@ -84,17 +91,25 @@ function NotificationInitializer() {
 }
 
 export default function RootLayout() {
+  useEffect(() => {
+    clearAllNotifications().catch((error) => {
+      console.error('Failed to clear notifications on app start:', error);
+    });
+  }, []);
+
   return (
-    <ProductProvider>
-      <SessionProvider>
-        <CartProvider>
-          <AppDialogProvider>
-            <NotificationInitializer />
-            <Slot />
-            <StatusBar style="dark" />
-          </AppDialogProvider>
-        </CartProvider>
-      </SessionProvider>
-    </ProductProvider>
+    <SafeAreaProvider>
+      <ProductProvider>
+        <SessionProvider>
+          <CartProvider>
+            <AppDialogProvider>
+              <NotificationInitializer />
+              <Slot />
+              <StatusBar style="dark" />
+            </AppDialogProvider>
+          </CartProvider>
+        </SessionProvider>
+      </ProductProvider>
+    </SafeAreaProvider>
   );
 }

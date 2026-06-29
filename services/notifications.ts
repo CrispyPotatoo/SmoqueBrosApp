@@ -254,6 +254,11 @@ export const startOrderStatusListener = (userId: string) => {
       const before = prevStatus[id];
       prevStatus[id] = status;
 
+      const items = Array.isArray(data?.items) ? data.items : [];
+      const firstItemName = items.length > 0 ? items[0]?.name : undefined;
+      const shortOrderId = id.substring(0, 8).toUpperCase();
+      const productLabel = firstItemName || `order #${shortOrderId}`;
+
       if (change.type !== 'modified') return;
       if (!status || before === status) return;
 
@@ -264,7 +269,7 @@ export const startOrderStatusListener = (userId: string) => {
           Notifications?.scheduleNotificationAsync({
             content: {
               title: 'Order Update',
-              body: `Your order #${id.substring(0, 8)} is now ${String(status)}.`,
+              body: `${productLabel} is now ${String(status)}.`,
               data: { type: 'order', orderId: id, status: String(status) } as any,
             },
             trigger: null,
@@ -390,6 +395,20 @@ export const cleanupExpoPushTokens = async (userId: string): Promise<void> => {
     console.log('✅ Expo Push Tokens cleaned up');
   } catch (error) {
     console.error('❌ Error cleaning up Expo Push Tokens:', error);
+  }
+};
+
+/**
+ * Clear all delivered notifications and reset badge count.
+ * Call this when the app is opened so old push notifications disappear.
+ */
+export const clearAllNotifications = async (): Promise<void> => {
+  if (!Notifications) return;
+  try {
+    await Notifications.dismissAllNotificationsAsync();
+    await Notifications.setBadgeCountAsync(0);
+  } catch (error) {
+    console.error('❌ Error clearing notifications:', error);
   }
 };
 

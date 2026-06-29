@@ -2,17 +2,27 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import AddressDropdown from '../../../components/AddressDropdown';
 import { useAppDialog } from '../../../components/AppDialogProvider';
 import { useSession } from '../../../context/SessionProvider';
-import { getUserAddresses, updateAddress } from '../../../services/address';
+import { getUserAddresses, setDefaultAddress, updateAddress } from '../../../services/address';
+import {
+  Barangay,
+  City,
+  getBarangaysByCity,
+  getCitiesByProvince,
+  getProvinces,
+  Province,
+} from '../../../services/psgc';
 
 export default function EditAddressScreen() {
   const { session } = useSession();
@@ -31,11 +41,44 @@ export default function EditAddressScreen() {
     isDefault: false,
   });
 
+  const [provinces, setProvinces] = useState<Province[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
+  const [barangays, setBarangays] = useState<Barangay[]>([]);
+
+  const [selectedProvinceCode, setSelectedProvinceCode] = useState('');
+  const [selectedCityCode, setSelectedCityCode] = useState('');
+
+  const [loadingProvinces, setLoadingProvinces] = useState(false);
+  const [loadingCities, setLoadingCities] = useState(false);
+  const [loadingBarangays, setLoadingBarangays] = useState(false);
+
   useEffect(() => {
     if (session && id) {
       loadAddress();
     }
   }, [session, id]);
+
+  useEffect(() => {
+    loadProvinces();
+  }, []);
+
+  useEffect(() => {
+    if (selectedProvinceCode) {
+      loadCities(selectedProvinceCode);
+    } else {
+      setCities([]);
+      setBarangays([]);
+      setSelectedCityCode('');
+    }
+  }, [selectedProvinceCode]);
+
+  useEffect(() => {
+    if (selectedCityCode) {
+      loadBarangays(selectedCityCode);
+    } else {
+      setBarangays([]);
+    }
+  }, [selectedCityCode]);
 
   const loadAddress = async () => {
     try {
@@ -69,8 +112,71 @@ export default function EditAddressScreen() {
     }
   };
 
+  const loadProvinces = async () => {
+    setLoadingProvinces(true);
+    try {
+      const data = await getProvinces();
+      setProvinces(data);
+    } catch (error) {
+      console.error('Error loading provinces:', error);
+    } finally {
+      setLoadingProvinces(false);
+    }
+  };
+
+  const loadCities = async (provinceCode: string) => {
+    setLoadingCities(true);
+    try {
+      const data = await getCitiesByProvince(provinceCode);
+      setCities(data);
+    } catch (error) {
+      console.error('Error loading cities:', error);
+    } finally {
+      setLoadingCities(false);
+    }
+  };
+
+  const loadBarangays = async (cityCode: string) => {
+    setLoadingBarangays(true);
+    try {
+      const data = await getBarangaysByCity(cityCode);
+      setBarangays(data);
+    } catch (error) {
+      console.error('Error loading barangays:', error);
+    } finally {
+      setLoadingBarangays(false);
+    }
+  };
+
   const handleInputChange = (field: string, value: string) => {
+    if (field === 'phone_number') {
+      const digits = value.replace(/\D/g, '').slice(0, 11);
+      setFormData(prev => ({ ...prev, phone_number: digits }));
+      return;
+    }
+
+    if (field === 'name') {
+      const cleaned = value.replace(/[^A-Za-z ]/g, '');
+      setFormData(prev => ({ ...prev, name: cleaned }));
+      return;
+    }
+
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleProvinceSelect = (province: Province) => {
+    setSelectedProvinceCode(province.code);
+    setFormData(prev => ({ ...prev, province: province.name, city: '', barangay: '' }));
+    setSelectedCityCode('');
+  };
+
+  const handleCitySelect = (city: City) => {
+    setSelectedCityCode(city.code);
+    setFormData(prev => ({ ...prev, city: city.name, barangay: '' }));
+  };
+
+  const handleBarangaySelect = (barangay: Barangay) => {
+    setFormData(prev => ({ ...prev, barangay: barangay.name }));
   };
 
   const validateForm = () => {
@@ -84,6 +190,23 @@ export default function EditAddressScreen() {
         return false;
       }
     }
+
+    if (!/^\d{11}$/.test(formData.phone_number)) {
+      showDialog({
+        title: 'Error',
+        message: 'Phone number must be exactly 11 digits.',
+      });
+      return false;
+    }
+
+    if (!/^[A-Za-z ]+$/.test(formData.name.trim())) {
+      showDialog({
+        title: 'Error',
+        message: 'Full name should contain letters only.',
+      });
+      return false;
+    }
+
     return true;
   };
 
@@ -93,6 +216,11 @@ export default function EditAddressScreen() {
     try {
       setLoading(true);
       await updateAddress(id as string, formData);
+
+      if (formData.isDefault && session?.uid) {
+        await setDefaultAddress(session.uid, id as string);
+      }
+
       showDialog({
         title: 'Success',
         message: 'Address updated successfully',
@@ -108,14 +236,14 @@ export default function EditAddressScreen() {
 
   if (initialLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <SafeAreaView style={styles.loadingContainer} edges={['top', 'bottom']}>
         <ActivityIndicator size="large" color="#007AFF" />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#000" />
@@ -144,6 +272,7 @@ export default function EditAddressScreen() {
               onChangeText={(value) => handleInputChange('phone_number', value)}
               placeholder="Enter phone number"
               keyboardType="phone-pad"
+              maxLength={11}
             />
           </View>
 
@@ -158,37 +287,34 @@ export default function EditAddressScreen() {
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Barangay *</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.barangay}
-              onChangeText={(value) => handleInputChange('barangay', value)}
-              placeholder="Enter barangay"
-            />
-          </View>
+          <AddressDropdown
+            label="Province"
+            placeholder="Select province"
+            value={formData.province}
+            items={provinces}
+            onSelect={handleProvinceSelect}
+            loading={loadingProvinces}
+          />
 
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>City *</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.city}
-                onChangeText={(value) => handleInputChange('city', value)}
-                placeholder="Enter city"
-              />
-            </View>
+          <AddressDropdown
+            label="City/Municipality"
+            placeholder="Select city"
+            value={formData.city}
+            items={cities}
+            onSelect={handleCitySelect}
+            disabled={!selectedProvinceCode}
+            loading={loadingCities}
+          />
 
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Province *</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.province}
-                onChangeText={(value) => handleInputChange('province', value)}
-                placeholder="Enter province"
-              />
-            </View>
-          </View>
+          <AddressDropdown
+            label="Barangay"
+            placeholder="Select barangay"
+            value={formData.barangay}
+            items={barangays}
+            onSelect={handleBarangaySelect}
+            disabled={!selectedCityCode}
+            loading={loadingBarangays}
+          />
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Postal Code *</Text>
@@ -228,7 +354,7 @@ export default function EditAddressScreen() {
           )}
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 

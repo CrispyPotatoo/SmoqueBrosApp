@@ -5,7 +5,6 @@ import React, { useState } from 'react';
 import {
     ActivityIndicator,
     Linking,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
@@ -13,6 +12,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppDialog } from '../components/AppDialogProvider';
 import { db } from '../constants/firebaseConfig';
 import { useSession } from '../context/SessionProvider';
@@ -118,7 +118,7 @@ export default function ContactScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>

@@ -30,6 +30,9 @@ export default function SettingsScreen() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   // Change Username states
   const [newUsername, setNewUsername] = useState('');
@@ -85,6 +88,14 @@ export default function SettingsScreen() {
 
     if (newPassword.length < 6) {
       showDialog({ title: 'Error', message: 'Password must be at least 6 characters' });
+      return;
+    }
+
+    if (newPassword === currentPassword) {
+      showDialog({
+        title: 'Error',
+        message: 'New password must be different from your current password',
+      });
       return;
     }
 
@@ -210,30 +221,66 @@ export default function SettingsScreen() {
 
             {expandedSection === 'password' && (
               <View style={styles.settingContent}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Current Password"
-                  placeholderTextColor="#999"
-                  secureTextEntry
-                  value={currentPassword}
-                  onChangeText={setCurrentPassword}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="New Password"
-                  placeholderTextColor="#999"
-                  secureTextEntry
-                  value={newPassword}
-                  onChangeText={setNewPassword}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Confirm New Password"
-                  placeholderTextColor="#999"
-                  secureTextEntry
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                />
+                <View style={styles.passwordInputWrapper}>
+                  <TextInput
+                    style={[styles.input, styles.passwordInput]}
+                    placeholder="Current Password"
+                    placeholderTextColor="#999"
+                    secureTextEntry={!showCurrentPassword}
+                    value={currentPassword}
+                    onChangeText={setCurrentPassword}
+                  />
+                  <TouchableOpacity
+                    style={styles.passwordToggle}
+                    onPress={() => setShowCurrentPassword(prev => !prev)}
+                  >
+                    <Ionicons
+                      name={showCurrentPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={20}
+                      color="#666"
+                    />
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.passwordInputWrapper}>
+                  <TextInput
+                    style={[styles.input, styles.passwordInput]}
+                    placeholder="New Password"
+                    placeholderTextColor="#999"
+                    secureTextEntry={!showNewPassword}
+                    value={newPassword}
+                    onChangeText={setNewPassword}
+                  />
+                  <TouchableOpacity
+                    style={styles.passwordToggle}
+                    onPress={() => setShowNewPassword(prev => !prev)}
+                  >
+                    <Ionicons
+                      name={showNewPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={20}
+                      color="#666"
+                    />
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.passwordInputWrapper}>
+                  <TextInput
+                    style={[styles.input, styles.passwordInput]}
+                    placeholder="Confirm New Password"
+                    placeholderTextColor="#999"
+                    secureTextEntry={!showConfirmPassword}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                  />
+                  <TouchableOpacity
+                    style={styles.passwordToggle}
+                    onPress={() => setShowConfirmPassword(prev => !prev)}
+                  >
+                    <Ionicons
+                      name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={20}
+                      color="#666"
+                    />
+                  </TouchableOpacity>
+                </View>
                 <TouchableOpacity
                   style={[styles.saveButton, isChangingPassword && styles.disabledButton]}
                   onPress={handleChangePassword}
@@ -483,6 +530,19 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     color: '#000',
+  },
+  passwordInputWrapper: {
+    position: 'relative',
+  },
+  passwordInput: {
+    paddingRight: 40,
+  },
+  passwordToggle: {
+    position: 'absolute',
+    right: 12,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
   },
   saveButton: {
     backgroundColor: '#000',

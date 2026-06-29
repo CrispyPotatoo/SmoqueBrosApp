@@ -2,15 +2,15 @@ import { Feather } from '@expo/vector-icons';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppDialog } from '../components/AppDialogProvider';
 import { useSession } from '../context/SessionProvider';
 import { Order, getOrdersByUserId } from '../services/orders';
@@ -96,7 +96,7 @@ export default function OrdersScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <ActivityIndicator size="large" color="#000" style={styles.centered} />
       </SafeAreaView>
     );
@@ -146,7 +146,10 @@ export default function OrdersScreen() {
           ),
         }}
       />
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        contentInsetAdjustmentBehavior="automatic"
+      >
         <View style={styles.inlineHeader}>
           <TouchableOpacity onPress={() => router.push('/you')} style={styles.inlineBackButton}>
             <Feather name="arrow-left" size={22} color="#000" />
@@ -274,7 +277,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 80,
   },
   inlineHeader: {
     flexDirection: 'row',

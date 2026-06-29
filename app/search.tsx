@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { View, TextInput, StyleSheet, Text, FlatList, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useProducts } from '../context/ProductProvider';
 import { Product } from '../services/products';
@@ -25,29 +26,36 @@ export default function SearchScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.searchContainer}>
-        <Feather name="search" size={20} color="#9e9e9e" style={styles.searchIcon} />
-        <TextInput
-          style={styles.input}
-          placeholder="Search for products..."
-          placeholderTextColor="#9e9e9e"
-          value={query}
-          onChangeText={handleSearch}
-          autoFocus
-        />
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <View style={styles.headerRow}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Feather name="arrow-left" size={22} color="#000" />
+        </TouchableOpacity>
+
+        <View style={styles.searchContainer}>
+          <Feather name="search" size={20} color="#9e9e9e" style={styles.searchIcon} />
+          <TextInput
+            style={styles.input}
+            placeholder="Search for products..."
+            placeholderTextColor="#9e9e9e"
+            value={query}
+            onChangeText={handleSearch}
+            autoFocus
+          />
+        </View>
       </View>
 
       <FlatList
         data={results}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingBottom: 80 }}
         renderItem={({ item }) => (
           <TouchableOpacity style={styles.resultItem} onPress={() => router.push(`/product/${item.id}`)}>
             <Text style={styles.resultText}>{item.name}</Text>
           </TouchableOpacity>
         )}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -57,13 +65,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     padding: 16,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  backButton: {
+    padding: 4,
+  },
   searchContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f0f0f0',
     borderRadius: 8,
     paddingHorizontal: 10,
-    marginBottom: 20,
+    marginLeft: 8,
   },
   searchIcon: {
     marginRight: 10,

@@ -4,34 +4,35 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Image,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import { useAppDialog } from '../../components/AppDialogProvider';
 import { auth } from '../../constants/firebaseConfig';
 import { useSession } from '../../context/SessionProvider';
 import { Address, getDefaultAddress } from '../../services/address';
 import { getKYCStatus, KYCStatus } from '../../services/kyc';
 import {
-    cleanupExpoPushTokens, initializeNotifications, setNotificationsEnabledCache
+  cleanupExpoPushTokens, initializeNotifications, setNotificationsEnabledCache
 } from '../../services/notifications';
-import { getOrdersByUserId, Order } from '../../services/orders';
+import { getOrdersByUserId, Order, subscribeToOrdersByUserId } from '../../services/orders';
 import {
-    getUserProfilePicture,
-    pickImage,
-    showImagePickerOptions,
-    takePhoto,
-    updateProfilePictureComplete,
+  getUserProfilePicture,
+  pickImage,
+  showImagePickerOptions,
+  takePhoto,
+  updateProfilePictureComplete,
 } from '../../services/profilePicture';
 
 // Helper function to get status badge styling
@@ -59,6 +60,7 @@ const NOTIFICATIONS_ENABLED_KEY_PREFIX = 'notifications_enabled_';
 export default function YouScreen() {
   const { session, signOut, isLoading } = useSession();
   const router = useRouter();
+  const { showDialog } = useAppDialog();
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [isOrdersLoading, setIsOrdersLoading] = useState(true);
@@ -71,6 +73,9 @@ export default function YouScreen() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [defaultAddress, setDefaultAddress] = useState<Address | null>(null);
   const [isAddressLoading, setIsAddressLoading] = useState(true);
@@ -201,7 +206,6 @@ export default function YouScreen() {
 
   useEffect(() => {
     if (session) {
-      fetchOrders();
       fetchKycStatus();
       fetchProfilePicture();
       fetchAddresses();
@@ -225,10 +229,33 @@ export default function YouScreen() {
     loadNotificationPreference();
   }, [session?.uid]);
 
+  useEffect(() => {
+    if (!session?.uid) {
+      setOrders([]);
+      return;
+    }
+
+    setIsOrdersLoading(true);
+
+    const unsubscribe = subscribeToOrdersByUserId(
+      session.uid,
+      (userOrders) => {
+        setOrders(userOrders);
+        setIsOrdersLoading(false);
+      },
+      () => {
+        setIsOrdersLoading(false);
+      },
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, [session?.uid]);
+
   useFocusEffect(
     React.useCallback(() => {
       if (session) {
-        fetchOrders();
         fetchKycStatus();
         fetchProfilePicture();
         fetchAddresses();
@@ -247,14 +274,24 @@ export default function YouScreen() {
   const handleChangePassword = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
       // Alert.alert('Error', 'Please fill in all password fields');
+      showDialog({ title: 'Error', message: 'Please fill in all password fields' });
       return;
     }
     if (newPassword !== confirmPassword) {
       // Alert.alert('Error', 'New passwords do not match');
+      showDialog({ title: 'Error', message: 'New passwords do not match' });
       return;
     }
     if (newPassword.length < 6) {
       // Alert.alert('Error', 'Password must be at least 6 characters');
+      showDialog({ title: 'Error', message: 'Password must be at least 6 characters' });
+      return;
+    }
+    if (newPassword === currentPassword) {
+      showDialog({
+        title: 'Error',
+        message: 'New password must be different from your current password',
+      });
       return;
     }
     setIsChangingPassword(true);
@@ -267,6 +304,7 @@ export default function YouScreen() {
       await reauthenticateWithCredential(user, credential);
       await updatePassword(user, newPassword);
       // Alert.alert('Success', 'Password changed successfully!');
+      showDialog({ title: 'Success', message: 'Password changed successfully!' });
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -275,10 +313,19 @@ export default function YouScreen() {
       console.error('Password change error:', error);
       if (error.code === 'auth/wrong-password') {
         // Alert.alert('Error', 'Current password is incorrect');
+        showDialog({ title: 'Error', message: 'Current password is incorrect' });
       } else if (error.code === 'auth/too-many-requests') {
         // Alert.alert('Error', 'Too many attempts. Please try again later');
+        showDialog({
+          title: 'Error',
+          message: 'Too many attempts. Please try again later',
+        });
       } else {
         // Alert.alert('Error', 'Failed to change password. Please try again');
+        showDialog({
+          title: 'Error',
+          message: 'Failed to change password. Please try again',
+        });
       }
     } finally {
       setIsChangingPassword(false);
@@ -479,30 +526,66 @@ export default function YouScreen() {
                 </TouchableOpacity>
                 {expandedSection === 'password' && (
                   <View style={styles.settingContent}>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Current Password"
-                      placeholderTextColor="#999"
-                      secureTextEntry
-                      value={currentPassword}
-                      onChangeText={setCurrentPassword}
-                    />
-                    <TextInput
-                      style={styles.input}
-                      placeholder="New Password"
-                      placeholderTextColor="#999"
-                      secureTextEntry
-                      value={newPassword}
-                      onChangeText={setNewPassword}
-                    />
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Confirm New Password"
-                      placeholderTextColor="#999"
-                      secureTextEntry
-                      value={confirmPassword}
-                      onChangeText={setConfirmPassword}
-                    />
+                    <View style={styles.passwordInputWrapper}>
+                      <TextInput
+                        style={[styles.input, styles.passwordInput]}
+                        placeholder="Current Password"
+                        placeholderTextColor="#999"
+                        secureTextEntry={!showCurrentPassword}
+                        value={currentPassword}
+                        onChangeText={setCurrentPassword}
+                      />
+                      <TouchableOpacity
+                        style={styles.passwordToggle}
+                        onPress={() => setShowCurrentPassword(prev => !prev)}
+                      >
+                        <Ionicons
+                          name={showCurrentPassword ? 'eye-off-outline' : 'eye-outline'}
+                          size={20}
+                          color="#666"
+                        />
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.passwordInputWrapper}>
+                      <TextInput
+                        style={[styles.input, styles.passwordInput]}
+                        placeholder="New Password"
+                        placeholderTextColor="#999"
+                        secureTextEntry={!showNewPassword}
+                        value={newPassword}
+                        onChangeText={setNewPassword}
+                      />
+                      <TouchableOpacity
+                        style={styles.passwordToggle}
+                        onPress={() => setShowNewPassword(prev => !prev)}
+                      >
+                        <Ionicons
+                          name={showNewPassword ? 'eye-off-outline' : 'eye-outline'}
+                          size={20}
+                          color="#666"
+                        />
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.passwordInputWrapper}>
+                      <TextInput
+                        style={[styles.input, styles.passwordInput]}
+                        placeholder="Confirm New Password"
+                        placeholderTextColor="#999"
+                        secureTextEntry={!showConfirmPassword}
+                        value={confirmPassword}
+                        onChangeText={setConfirmPassword}
+                      />
+                      <TouchableOpacity
+                        style={styles.passwordToggle}
+                        onPress={() => setShowConfirmPassword(prev => !prev)}
+                      >
+                        <Ionicons
+                          name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                          size={20}
+                          color="#666"
+                        />
+                      </TouchableOpacity>
+                    </View>
                     <TouchableOpacity
                       style={[styles.saveButton, isChangingPassword && styles.saveButtonDisabled]}
                       onPress={handleChangePassword}
@@ -949,6 +1032,19 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     color: '#000',
+  },
+  passwordInputWrapper: {
+    position: 'relative',
+  },
+  passwordInput: {
+    paddingRight: 40,
+  },
+  passwordToggle: {
+    position: 'absolute',
+    right: 12,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
   },
   addressDetails: {
     gap: 8,

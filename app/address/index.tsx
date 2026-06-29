@@ -9,6 +9,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppDialog } from '../../components/AppDialogProvider';
 import { useSession } from '../../context/SessionProvider';
 import { Address, deleteAddress, getUserAddresses, setDefaultAddress } from '../../services/address';
@@ -121,25 +122,26 @@ export default function AddressListScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <SafeAreaView style={styles.loadingContainer} edges={['top', 'bottom']}>
         <ActivityIndicator size="large" color="#007AFF" />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Addresses</Text>
-        <TouchableOpacity onPress={() => router.push('/address/add')}>
-          <Ionicons name="add" size={24} color="#007AFF" />
-        </TouchableOpacity>
+        <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView style={styles.content}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={{ paddingBottom: 32 }}
+      >
         {addresses.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="location-outline" size={64} color="#ccc" />
@@ -164,7 +166,7 @@ export default function AddressListScreen() {
           <Ionicons name="add" size={24} color="#fff" />
         </TouchableOpacity>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 

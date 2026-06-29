@@ -2,23 +2,24 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 
+import { useAppDialog } from '../../components/AppDialogProvider';
 import { resetPassword } from '../../services/auth';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
+  const { showDialog } = useAppDialog();
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -39,6 +40,13 @@ export default function ForgotPasswordScreen() {
       await resetPassword(email.trim());
       setMessage('If an account exists for that email, we\'ve sent password reset instructions. Please check your inbox.');
       setMessageType('success');
+
+      showDialog({
+        title: 'Password Reset',
+        message: 'Your password has been changed',
+        confirmText: 'OK',
+        onConfirm: () => router.replace('/(auth)'),
+      });
     } catch (error: any) {
       if (error.message?.includes('No account found')) {
         setMessage('No account found with this email address.');

@@ -2,25 +2,26 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AddressDropdown from '../../components/AddressDropdown';
 import { useAppDialog } from '../../components/AppDialogProvider';
 import { useSession } from '../../context/SessionProvider';
-import { addAddress } from '../../services/address';
+import { addAddress, setDefaultAddress } from '../../services/address';
 import {
-    Barangay,
-    City,
-    getBarangaysByCity,
-    getCitiesByProvince,
-    getProvinces,
-    Province,
+  Barangay,
+  City,
+  getBarangaysByCity,
+  getCitiesByProvince,
+  getProvinces,
+  Province,
 } from '../../services/psgc';
 
 export default function AddAddressScreen() {
@@ -120,6 +121,20 @@ export default function AddAddressScreen() {
   };
 
   const handleInputChange = (field: string, value: string) => {
+    if (field === 'phone_number') {
+      // Keep only digits and limit to 11 characters
+      const digits = value.replace(/\D/g, '').slice(0, 11);
+      setFormData(prev => ({ ...prev, phone_number: digits }));
+      return;
+    }
+
+    if (field === 'name') {
+      // Allow only letters and spaces
+      const cleaned = value.replace(/[^A-Za-z ]/g, '');
+      setFormData(prev => ({ ...prev, name: cleaned }));
+      return;
+    }
+
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -149,6 +164,23 @@ export default function AddAddressScreen() {
         return false;
       }
     }
+
+    if (!/^\d{11}$/.test(formData.phone_number)) {
+      showDialog({
+        title: 'Error',
+        message: 'Phone number must be exactly 11 digits.',
+      });
+      return false;
+    }
+
+    if (!/^[A-Za-z ]+$/.test(formData.name.trim())) {
+      showDialog({
+        title: 'Error',
+        message: 'Full name should contain letters only.',
+      });
+      return false;
+    }
+
     return true;
   };
 
@@ -170,7 +202,12 @@ export default function AddAddressScreen() {
 
     try {
       setLoading(true);
-      await addAddress(session.uid, formData);
+      const createdAddress = await addAddress(session.uid, formData);
+
+      if (formData.isDefault) {
+        await setDefaultAddress(session.uid, createdAddress.id);
+      }
+
       showDialog({
         title: 'Success',
         message: 'Address added successfully',
@@ -189,7 +226,7 @@ export default function AddAddressScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#000" />
@@ -209,6 +246,7 @@ export default function AddAddressScreen() {
               placeholder="Enter phone number"
               placeholderTextColor="#999"
               keyboardType="phone-pad"
+              maxLength={11}
             />
           </View>
 
@@ -292,7 +330,7 @@ export default function AddAddressScreen() {
           )}
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 

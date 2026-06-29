@@ -3,23 +3,24 @@ import { useRouter } from 'expo-router';
 import { collection, doc, getDoc, onSnapshot, QueryDocumentSnapshot } from 'firebase/firestore';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { useAppDialog } from '../../components/AppDialogProvider';
 import { db } from '../../constants/firebaseConfig';
 import { useSession } from '../../context/SessionProvider';
 import { getUserAddresses } from '../../services/address';
 import {
-    CartItem,
-    removeFromCart,
-    updateCartItemQuantity
+  CartItem,
+  removeFromCart,
+  updateCartItemQuantity
 } from '../../services/cart';
 import { getKYCStatus } from '../../services/kyc';
 import { getProductById } from '../../services/products';
@@ -33,6 +34,7 @@ export default function CartScreen() {
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editingQuantities, setEditingQuantities] = useState<Map<string, string>>(new Map());
 
   // Real-time cart items listener
   useEffect(() => {
@@ -53,10 +55,10 @@ export default function CartScreen() {
 
     const unsubscribe = onSnapshot(cartItemsRef, async (snapshot) => {
       console.log('🔥 Real-time cart update:', snapshot.size, 'items');
-      
+
       const cartItems: CartItem[] = [];
       const stockMap = new Map<string, number>();
-      
+
       snapshot.forEach((doc: QueryDocumentSnapshot) => {
         const data = doc.data();
         cartItems.push({
@@ -87,14 +89,14 @@ export default function CartScreen() {
             // Check if product is archived by fetching the raw Firestore document
             const productRef = doc(db, 'products', item.productId);
             const productDoc = await getDoc(productRef);
-            
+
             if (productDoc.exists()) {
               const productData = productDoc.data();
-              const isArchived = productData.archived === true || 
-                                productData.archived === 'true' || 
-                                productData.archived === 1 ||
-                                (productData.archived !== undefined && productData.archived !== false && productData.archived !== 'false' && productData.archived !== 0);
-              
+              const isArchived = productData.archived === true ||
+                productData.archived === 'true' ||
+                productData.archived === 1 ||
+                (productData.archived !== undefined && productData.archived !== false && productData.archived !== 'false' && productData.archived !== 0);
+
               if (isArchived) {
                 console.log(`🗑️ Removing archived product from cart: ${item.name} (${item.productId})`);
                 // Remove archived product from cart
@@ -105,7 +107,7 @@ export default function CartScreen() {
                 }
                 continue; // Skip this item
               }
-              
+
               stockMap.set(item.id, product.stock);
               validCartItems.push(item);
             } else {
@@ -131,7 +133,7 @@ export default function CartScreen() {
       setItems(validCartItems);
       setItemsWithStock(stockMap);
       setIsLoading(false);
-      
+
       // Clear selected items that no longer exist
       setSelectedItems(prev => {
         const newSet = new Set<string>();
@@ -188,11 +190,11 @@ export default function CartScreen() {
 
   const handleUpdateQuantity = async (itemId: string, newQuantity: number) => {
     if (!session) return;
-    
+
     // Only check stock when INCREASING quantity
     const currentStock = itemsWithStock.get(itemId) || 0;
     const item = items.find(i => i.id === itemId);
-    
+
     if (item && newQuantity > item.quantity && newQuantity > currentStock) {
       showDialog({
         title: 'Insufficient Stock',
@@ -200,7 +202,7 @@ export default function CartScreen() {
       });
       return;
     }
-    
+
     try {
       console.log('📝 Updating quantity for item:', itemId, 'to:', newQuantity);
       await updateCartItemQuantity(session.uid, itemId, newQuantity);
@@ -245,7 +247,7 @@ export default function CartScreen() {
     try {
       // Check KYC verification status
       const kycStatus = await getKYCStatus(session.uid);
-      
+
       if (kycStatus.status !== 'verified') {
         showDialog({
           title: 'Verification Required',
@@ -259,7 +261,7 @@ export default function CartScreen() {
 
       // Check if user has at least one address
       const userAddresses = await getUserAddresses(session.uid);
-      
+
       if (userAddresses.length === 0) {
         showDialog({
           title: 'Address Required',
@@ -315,7 +317,7 @@ export default function CartScreen() {
     }
 
     console.log('📱 Rendering items with ScrollView:', items.length, items.map(i => ({ id: i.id, name: i.name })));
-    
+
     return (
       <ScrollView style={styles.listContent}>
         {items.map((item, index) => {
@@ -358,28 +360,95 @@ export default function CartScreen() {
                       styles.quantityButton,
                       item.quantity <= 1 && styles.quantityButtonDisabled
                     ]}
-                    onPress={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                    onPress={() => {
+                      // Clear editing state
+                      setEditingQuantities(prev => {
+                        const newMap = new Map(prev);
+                        newMap.delete(item.id);
+                        return newMap;
+                      });
+                      handleUpdateQuantity(item.id, item.quantity - 1);
+                    }}
                     disabled={item.quantity <= 1}
                   >
-                    <Feather 
-                      name="minus" 
-                      size={16} 
-                      color={item.quantity <= 1 ? '#ccc' : '#333'} 
+                    <Feather
+                      name="minus"
+                      size={16}
+                      color={item.quantity <= 1 ? '#ccc' : '#333'}
                     />
                   </TouchableOpacity>
-                  <Text style={styles.quantityText}>{item.quantity}</Text>
+                  <TextInput
+                    style={styles.quantityInput}
+                    value={editingQuantities.get(item.id) ?? item.quantity.toString()}
+                    onChangeText={(text) => {
+                      // Update local editing state immediately for responsiveness
+                      setEditingQuantities(prev => {
+                        const newMap = new Map(prev);
+                        newMap.set(item.id, text);
+                        return newMap;
+                      });
+                    }}
+                    onBlur={() => {
+                      // When user finishes editing, validate and update
+                      const editedValue = editingQuantities.get(item.id);
+                      if (editedValue !== undefined) {
+                        const value = parseInt(editedValue) || 0;
+                        if (value === 0) {
+                          // Remove item if quantity is set to 0
+                          handleRemoveItem(item.id);
+                        } else if (value !== item.quantity) {
+                          // Update quantity if it changed
+                          handleUpdateQuantity(item.id, value);
+                        }
+                        // Clear editing state
+                        setEditingQuantities(prev => {
+                          const newMap = new Map(prev);
+                          newMap.delete(item.id);
+                          return newMap;
+                        });
+                      }
+                    }}
+                    onSubmitEditing={() => {
+                      // Same logic as onBlur when user presses enter/done
+                      const editedValue = editingQuantities.get(item.id);
+                      if (editedValue !== undefined) {
+                        const value = parseInt(editedValue) || 0;
+                        if (value === 0) {
+                          handleRemoveItem(item.id);
+                        } else if (value !== item.quantity) {
+                          handleUpdateQuantity(item.id, value);
+                        }
+                        setEditingQuantities(prev => {
+                          const newMap = new Map(prev);
+                          newMap.delete(item.id);
+                          return newMap;
+                        });
+                      }
+                    }}
+                    keyboardType="number-pad"
+                    maxLength={4}
+                    selectTextOnFocus
+                  />
                   <TouchableOpacity
                     style={[
                       styles.quantityButton,
                       item.quantity >= (itemsWithStock.get(item.id) || 0) && styles.quantityButtonDisabled
                     ]}
-                    onPress={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                    onPress={() => {
+                      // Clear editing state
+                      setEditingQuantities(prev => {
+                        const newMap = new Map(prev);
+                        newMap.delete(item.id);
+                        return newMap;
+                      });
+                      handleUpdateQuantity(item.id, item.quantity + 1);
+                    }}
                     disabled={item.quantity >= (itemsWithStock.get(item.id) || 0)}
                   >
-                    <Feather 
-                      name="plus" 
-                      size={16} 
-                      color={item.quantity >= (itemsWithStock.get(item.id) || 0) ? '#ccc' : '#333'} 
+                    <Feather
+                      name="plus"
+                      size={16}
+                      color={item.quantity >= (itemsWithStock.get(item.id) || 0) ? '#ccc' : '#333'}
                     />
                   </TouchableOpacity>
                 </View>
@@ -400,7 +469,7 @@ export default function CartScreen() {
   return (
     <SafeAreaView style={styles.container}>
       {renderContent()}
-      
+
       {items.length > 0 && (
         <View style={styles.bottomContainer}>
           <TouchableOpacity onPress={handleSelectAll} style={styles.selectAllButton}>
@@ -505,10 +574,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     borderColor: '#e0e0e0',
   },
-  quantityText: {
+  quantityInput: {
     marginHorizontal: 12,
     fontSize: 16,
     fontWeight: 'bold',
+    textAlign: 'center',
+    minWidth: 40,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
   },
   stockWarning: {
     flexDirection: 'row',
